@@ -3,15 +3,38 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
-
-	<title>{ifset title}{include title|stripHtml} | {/ifset}Nette Web</title>
+	{* Dynamický titulek: POkud šablona nastaví {block title}, zobrazí se zde*}
+	<title>{ifset title}{include title|stripHtml} | {/ifset}My E-shop</title>
 
 	{asset? 'main.js'}
+	{* bootstrap *}
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+	{* FontAwesome *}
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
-<body>
-	<div n:foreach="$flashes as $flash" n:class="flash, $flash->type">{$flash->message}</div>
+<body class="bg-light">
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+			<div class="container d-flex justify-content-between">
+				<a class="navbar-brand" n:href="Home:default">My Eshop - Elektro</a>
 
-	{include content}
+				{* KOŠÍK: Zobrazení aktuálního stavu ze session *}
+				<span class="navbar-text text-white">
+					<i class="fas fa-shopping-cart"></i>
+				</span>
+				<span class="badge bg-primary">					
+					{var $cartSession = $presenter->getSession('cart')}
+					{ifset $cartSession->items}{count($cartSession->items)}{else}0{/ifset} 										
+				</span>
+			</div>
+		</nav>
+
+		<div class="container bg-white p-4 shadow-sm rounded">
+		{* Flash zprávy: Informační bubliny *}
+			<div n:foreach="$flashes as $flash" n:class="alert, 'alert-' . $flash->type">{$flash->message}</div>
+
+			{* Tady se vykreslí konkrétní stránky *}
+			{include content}
+		</div>
 </body>
 </html>
