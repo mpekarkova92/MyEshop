@@ -55,6 +55,7 @@ final class HomePresenter extends Nette\Application\UI\Presenter
 
 	/**
 	 * Továrna na formulář. Nette zavolá tuhle metodu, když v šabloně uvidí {form addProductForm}
+	 * /** @return Nette\Application\UI\Multiplier<Nette\Application\UI\Form> 
 	 */
 	protected function createComponentAddProductForm(): \Nette\Application\UI\Form
 	{

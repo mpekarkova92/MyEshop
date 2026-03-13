@@ -1,0 +1,44 @@
+{layout '../Presentation/@layout.latte'}
+
+{block content}
+<h1 class="mb-4 fw-bold text-dark">Váš nákupuní košík</h1>
+
+{if empty($products)}
+    <div class="alert alert-info">
+        Váš košík je prázdný. <a n:href="Home:default">Vyberte zboží</a>
+    </div>
+{else}
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th class="ps-3">Produkt</th>
+                    <th>Barva</th>
+                    <th class="text-end pe-3">Cena</th>
+                </tr>
+            </thead>
+            <tbody>
+                {foreach $products as $product}
+                    <tr>
+                        <td class="ps-3 fw-bold">{$product->name}</td>
+                        <td><span class="badge bg-light text-dark border">{$product->color ?? '---'}</span></td>
+                        <td class="text-end pe-3">{$product->price|number:0, ',', ' '}Kč</td>
+                    </tr>
+                {/foreach}
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <td colspan="2" class="text-end fw-bold h4 ps-3">Celkem k úhradě</td>
+                    <td class="text-end pe-3 fw-bold h4 text-succes">{$total|number:0, ',', ' '}Kč</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <a n:href="clear!" class="btn btn-outline-danger">Vysypat košík</a>
+        <a n:href="Home:default" class="btn btn-outline-secondary">Pokračovat k nákupu</a>
+        <button class="btn btn-succes btn-lg px-5 fw-bold">Přejít k pokladně &rarr;</button>
+    </div>
+{/if}
+{/block}       

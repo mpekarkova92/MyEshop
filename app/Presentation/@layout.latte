@@ -19,13 +19,16 @@
 				<a class="navbar-brand" n:href="Home:default">My Eshop - Elektro</a>
 
 				{* KOŠÍK: Zobrazení aktuálního stavu ze session *}
-				<span class="navbar-text text-white">
-					<i class="fas fa-shopping-cart"></i>
-				</span>
-				<span class="badge bg-primary">					
-					{var $cartSession = $presenter->getSession('cart')}
-					{ifset $cartSession->items}{count($cartSession->items)}{else}0{/ifset} 										
-				</span>
+
+				<a n:href="Cart:default" class="text-decoration-none">
+					<span class="navbar-text text-white">
+						<i class="fas fa-shopping-cart"></i>
+					</span>
+					<span class="badge bg-primary">					
+						{var $cartSession = $presenter->getSession('cart')}
+						{ifset $cartSession->items}{count($cartSession->items)}{else}0{/ifset} 										
+					</span>
+				</a>
 			</div>
 		</nav>
 
