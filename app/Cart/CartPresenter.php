@@ -27,30 +27,46 @@ final class CartPresenter extends Nette\Application\UI\Presenter
         $session = $this->getSession('cart');
 
         // Vytáhneme seznam ID produktů. pokud je košík prázdný, použijeme prázné hodnoty
-        $items = $session->items ?? [];
+        $rawItems = $session->items ?? [];
+        $items = is_array($rawItems) ? $rawItems : [];
 
-        // Pokud v košíki nic není, pošleme do šablony prázdné hodnoty
-        if(empty($items)) {
+        // Pokud v košíku nic není, pošleme do šablony prázdné hodnoty
+        if ($items === []) {
             $this->template->products = [];
             $this->template->total = 0;
             return;
         }
 
-        // Dotaz do DB: Dej mi produkty, které mají ID v tomto seznamu 
-        // SQL SELECT * FROM product WHERE id IN (1, 5, 8)
-        $products = $this->database->table('product')
-            ->where('id', $items)
-            ->fetchAll();
+        // Spočítáme kolikrát je ID v košíku
+        $counts = array_count_values($items);
 
-        // Výpočet celkové ceny nákupu 
+        // Vytáhneme unikátní ID
+        $productFromDb = $this->database->table('product')
+        ->where('id', array_keys($counts))
+        ->fetchAll();
+
+        $finalItems = [];
         $total = 0;
-        foreach($products as $product){
-            $total += $product->price;
+
+        // Poskládáme si pole, které obsahuje produkt i jeho počet
+        foreach ($productFromDb as $product) {
+            $productId = (int) $product->id;
+            $quantity = $counts[$productId];
+            $subtotal = $product->price * $quantity;
+            $total += $subtotal;
+            
+            $finalItems[] = (object) [
+                'id' => $productId,
+                'name' => $product->name,
+                'price' => $product->price,
+                'color' => $product->color,
+                'quantity' => $quantity,
+                'subtotal' => $subtotal,
+            ];
         }
 
-        // Předání dat do Latte šablony
-        $this->template->products = $products; // Seznam produktů 
-        $this->template->total = $total; // Výsledná suma
+        $this->template->products = $finalItems;
+        $this->template->total = $total;
     }
 
     /**
@@ -66,6 +82,49 @@ final class CartPresenter extends Nette\Application\UI\Presenter
         $this->flashMessage('Košík byl úspěšně smazán', 'info');
 
         // Přesměrování na stránku
+        $this->redirect('this');
+    }
+
+    /**
+     * Signál pro přidání jednoho kusu produktu do košíku (tlačítko plus)
+     */
+    public function handleAdd(int $id): void
+    {
+        $session = $this->getSession('cart');
+        $items = $session->items;
+
+        if (!is_array($items)) {
+            $items = [];
+        }
+
+        $items[] = $id;
+        $session->items = $items;
+
+        $this->redirect('this');
+    }
+
+    /**
+     * Signál pro odebrání jednoho kusu produktu z košíku (tlačítko minus)
+     */
+    public function handleRemove(int $id): void
+    {
+        $session = $this->getSession('cart');
+        $items = $session->items;
+
+        // Zajistíme, že máme pole
+        if (!is_array($items)) {
+            $items = [];
+        }
+
+        // Najdeme pozici (klíč)
+        $key = array_search($id, $items, true);
+
+        // Pokud jsme ho našli, "vystřihneme" jeden prvek na dané pozici
+        if ($key !== false) {
+            array_splice($items, (int) $key, 1);
+            $session->items = $items;
+        }
+
         $this->redirect('this');
     }
 }

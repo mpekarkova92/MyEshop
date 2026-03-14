@@ -10,12 +10,16 @@ final class LatteExtension extends Extension
 	/** @return array<string, callable> */
 	public function getFilters(): array
 	{
-		return [];
+		return [
+			// filtry...
+		];
 	}
 
 	/** @return array<string, callable> */
 	public function getFunctions(): array
 	{
-		return [];
+		return [
+			// funkce...
+		];
 	}
 }
