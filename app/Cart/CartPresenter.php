@@ -4,6 +4,7 @@ namespace App\Presentation\Cart;
 
 use Nette;
 use Nette\Database\Explorer;
+use App\Model\PaymentService;
 
 /**
  * Presenter pro obsluhu nákupního košíku
@@ -16,6 +17,7 @@ final class CartPresenter extends Nette\Application\UI\Presenter
      */
     public function __construct(
         private Explorer $database,
+        private PaymentService $paymentService,
     ) {}
 
     /**
@@ -42,16 +44,26 @@ final class CartPresenter extends Nette\Application\UI\Presenter
 
         // Vytáhneme unikátní ID
         $productFromDb = $this->database->table('product')
-        ->where('id', array_keys($counts))
-        ->fetchAll();
+            ->where('id', array_keys($counts))
+            ->fetchAll();
 
         $finalItems = [];
         $total = 0;
 
         // Poskládáme si pole, které obsahuje produkt i jeho počet
         foreach ($productFromDb as $product) {
+            $row = $product->toArray();
             $productId = (int) $product->id;
-            $quantity = $counts[$productId];
+            $quantity = (int) ($counts[$productId] ?? 0);
+
+            $stockRaw = $row['stock']
+                ?? $row['in_stock']
+                ?? $row['qty']
+                ?? $row['quantity']
+                ?? null;
+
+            $stock = is_numeric($stockRaw) ? (int) $stockRaw : null;
+            $isStockProblem = $stock !== null && $quantity > $stock;
             $subtotal = $product->price * $quantity;
             $total += $subtotal;
             
@@ -60,6 +72,8 @@ final class CartPresenter extends Nette\Application\UI\Presenter
                 'name' => $product->name,
                 'price' => $product->price,
                 'color' => $product->color,
+                'stock' => $stock,
+                'isStockProblem' => $isStockProblem,
                 'quantity' => $quantity,
                 'subtotal' => $subtotal,
             ];
@@ -126,5 +140,45 @@ final class CartPresenter extends Nette\Application\UI\Presenter
         }
 
         $this->redirect('this');
+    }
+
+    public function handleCheckout(): void
+    {
+        $session = $this->getSession('cart');
+        $rawItems = $session->items ?? [];
+        $items = is_array($rawItems) ? $rawItems : [];
+
+        if ($items === []) {
+            $this->flashMessage('Košík je prázdný.', 'warning');
+            $this->redirect('this');
+            return;
+        }
+
+        // Zde vytvořím záznam v tabulce 'orders' a získám $orderID
+        $orderId = 123456; // Simulace ID objednávky
+
+        $counts = array_count_values($items);
+        $productsFromDb = $this->database->table('product')
+            ->where('id', array_keys($counts))
+            ->fetchAll();
+
+        $totalAmount = 0.0;
+        foreach ($productsFromDb as $product) {
+            $productId = (int) $product->id;
+            $quantity = (int) ($counts[$productId] ?? 0);
+            $totalAmount += ((float) $product->price) * $quantity;
+        }
+
+        $url = $this->paymentService->createPaymentUrl($orderId, $totalAmount);
+
+        unset($session->items);
+        $this->flashMessage('Objednávka vytvořena. Přesměrování na platební bránu...', 'success');
+        $this->redirectUrl($url);
+    }
+
+    public function renderPaymentSuccess(?int $id = null): void
+    {
+        // Tady zkontrolujeme DB, jetsli je objednávka zaplacena
+        $this->template->orderId = $id;
     }
 }

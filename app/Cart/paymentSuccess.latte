@@ -1,0 +1,13 @@
+{layout '../Presentation/@layout.latte'}
+
+{block content}
+<div class="container text-center mt-5">
+    <h1 class="text-success"><i class="fas fa-check-circle"></i> Platba proběhla úspěšně!</h1>
+    {if $orderId}
+        <p class="lead">Vaše objednávka č. <strong>{$orderId}</strong> byla přijata ke zpracování.</p>
+    {else}
+        <p class="lead">Vaše objednávka byla přijata ke zpracování.</p>
+    {/if}
+    <a n:href="Home:default" class="btn btn-primary">Zpět na hlavní stránku</a>
+</div>
+{/block}
