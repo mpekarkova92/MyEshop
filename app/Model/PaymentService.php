@@ -4,10 +4,6 @@ namespace App\Model;
 
 final class PaymentService
 {
-
-    // Tady budou klíče od Gopay
-    private string $merchantId = '123456789';
-
     /**
      * Metoda vygeneruje URL, na kterou přesměruje zákazníka
      */

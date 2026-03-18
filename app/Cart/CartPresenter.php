@@ -151,7 +151,6 @@ final class CartPresenter extends Nette\Application\UI\Presenter
         if ($items === []) {
             $this->flashMessage('Košík je prázdný.', 'warning');
             $this->redirect('this');
-            return;
         }
 
         // Zde vytvořím záznam v tabulce 'orders' a získám $orderID
