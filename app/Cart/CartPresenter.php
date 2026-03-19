@@ -103,81 +103,130 @@ final class CartPresenter extends Nette\Application\UI\Presenter
      * Signál pro přidání jednoho kusu produktu do košíku (tlačítko plus)
      */
     public function handleAdd(int $id): void
-    {
-        $session = $this->getSession('cart');
-        $items = $session->items;
+{
+    $session = $this->getSession('cart');
+    $items = is_array($session->items) ? $session->items : [];
 
-        if (!is_array($items)) {
-            $items = [];
-        }
+    $items[] = $id;
+    $session->items = $items;
 
-        $items[] = $id;
-        $session->items = $items;
-
+    // AJAX kontrola
+    if ($this->isAjax()) {
+        $this->redrawControl('cartTable');
+    } else {
         $this->redirect('this');
     }
 
+}
     /**
      * Signál pro odebrání jednoho kusu produktu z košíku (tlačítko minus)
      */
     public function handleRemove(int $id): void
     {
         $session = $this->getSession('cart');
-        $items = $session->items;
+        $items = is_array($session->items) ? $session->items : [];
 
-        // Zajistíme, že máme pole
-        if (!is_array($items)) {
-            $items = [];
-        }
-
-        // Najdeme pozici (klíč)
         $key = array_search($id, $items, true);
 
-        // Pokud jsme ho našli, "vystřihneme" jeden prvek na dané pozici
         if ($key !== false) {
             array_splice($items, (int) $key, 1);
             $session->items = $items;
         }
 
-        $this->redirect('this');
+        // AJAX kontrola
+        if ($this->isAjax()) {
+            $this->redrawControl('cartTable');
+        } else {
+            $this->redirect('this');
+        }
     }
 
     public function handleCheckout(): void
     {
         $session = $this->getSession('cart');
-        $rawItems = $session->items ?? [];
-        $items = is_array($rawItems) ? $rawItems : [];
-
+        $items = is_array($session->items) ? $session->items : [];
+    
         if ($items === []) {
             $this->flashMessage('Košík je prázdný.', 'warning');
             $this->redirect('this');
         }
-
-        // Zde vytvořím záznam v tabulce 'orders' a získám $orderID
-        $orderId = 123456; // Simulace ID objednávky
-
+    
         $counts = array_count_values($items);
         $productsFromDb = $this->database->table('product')
             ->where('id', array_keys($counts))
             ->fetchAll();
-
+    
         $totalAmount = 0.0;
         foreach ($productsFromDb as $product) {
-            $productId = (int) $product->id;
-            $quantity = (int) ($counts[$productId] ?? 0);
-            $totalAmount += ((float) $product->price) * $quantity;
+            $totalAmount += ((float) $product->price) * ($counts[$product->id] ?? 0);
         }
-
-        $url = $this->paymentService->createPaymentUrl($orderId, $totalAmount);
-
+    
+        // SQL: Vytvoření záznamu v tabulce 'orders'
+        $order = $this->database->table('orders')->insert([
+            'customer_name' => 'Anonymní zákazník',
+            'email' => 'test@test.cz',
+            'total_price' => $totalAmount,
+            'status' => 'new',
+            'created_at' => new \DateTime(),
+        ]);
+    
+        $orderId = $order->id; // Skutečné ID z databáze
+    
+        // SQL: Uložení jednotlivých položek do 'order_items'
+        foreach ($productsFromDb as $product) {
+            $qty = (int) $counts[$product->id];
+            $this->database->table('order_items')->insert([
+                'order_id' => $orderId,
+                'product_id' => $product->id,
+                'quantity' => $qty,
+                'price' => $product->price,
+            ]);
+            
+            // SQL: Odečtení ze skladu
+            $product->update(['quantity' => $product->quantity - $qty]);
+        }
+    
         unset($session->items);
-        $this->flashMessage('Objednávka vytvořena. Přesměrování na platební bránu...', 'success');
-        $this->redirectUrl($url);
+        
+        // Přesměrování na novou akci 'done' (vytvoříme v dalším kroku)
+        $this->redirect('done', ['id' => $orderId]);
     }
 
-    public function renderPaymentSuccess(?int $id = null): void
+    public function renderDone(int $id): void
     {
-        // Tady zkontrolujeme DB, jetsli je objednávka zaplacena
-        $this->template->orderId = $id;
+        // SQL: Vyhledá objednávku v DB podle ID z adresy
+        $order = $this->database->table('orders')->get($id);
+
+        // Kontrola: pokud objednávka neexistuje, vyhodí chybu
+        if (!$order) {
+            $this->error('Objednávka nebyla nalezena.');
+        }
+
+        // Latte: Předá nalezenou objednávku do šablony
+        $this->template->order = $order;
+    }
+
+    // Přidání počtu produktů v košíku
+    public function handleUpdateQuantity(int $id, int $quantity = 1): void
+    {
+        $session = $this->getSession('cart');
+        $items = is_array($session->items) ? $session->items : [];
+
+        // Vymažeme všechny staré výskyty tohoto ID (počet)
+        $items = array_filter($items, fn($itemId) => $itemId !== $id);
+
+        // Přidáme ho tam tolikrát, kolik uživatel napsal
+        for ($i = 0; $i < $quantity; $i++) {
+            $items[] = $id;
+        }
+
+        $session->items = $items;
+        
+        // Pokud je to AJAX, překleslíme jen košík
+        if ($this->isAjax()) {
+            $this->redrawControl('cartTable'); // Zrychlení (Pošle jen kousek HTML ne celou stránku)
+        } else {
+            $this->redirect('this');
+        }
     }
 }

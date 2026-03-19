@@ -1,0 +1,22 @@
+{layout '../Presentation/@layout.latte'}
+
+{block content}
+<div class="text-center py-5 shadow-sm bg-white rounded">
+    <i class="fas fa-check-circle text-success display-1 mb-4"></i>
+    <h1 class="fw-bold">Děkujeme za Vaši objednávku!</h1>
+    <p class="lead">Vaše objednávka č. <strong>{$order->id}</strong> byla úspěšně přijata.</p>
+
+    <div class="my-4 p-3 bg-light border-top border-bottom">
+        <span class="h4">Celková částka k úhradě: </span>
+        <span class="h4 text-success fw-bold">{$order->total_price|number:2, ',', ' '} Kč</span>
+    </div>
+
+    <p class="text-muted">Potvrzení o objednávce jsme zaslali a email: <strong>{$order->email}</strong></p>
+
+    <div clas="mt-5">
+        <a n:href="Home:default" class="btn btn-primary btn-lg px-5">
+            <i class="fas fa-shopping-bag me-2"></i> Zpět do obchodu 
+        </a>
+    </div>
+</div>
+{/block}

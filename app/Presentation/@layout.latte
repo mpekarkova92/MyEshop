@@ -39,5 +39,32 @@
 			{* Tady se vykreslí konkrétní stránky *}
 			{include content}
 		</div>
+
+		<script src="https://unpkg.com/naja@2/dist/Naja.min.js"></script>
+			<script>
+    			naja.initialize();
+			</script>
+			<script src="https://unpkg.com/naja@2/dist/Naja.min.js"></script>
+<style>
+    /* Skrytí šipek pro Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Skrytí šipek pro Firefox */
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    /* Vzhled políčka, aby vypadalo čistě */
+    .ajax-input {
+        border: none;
+        background: transparent;
+        outline: none;
+        box-shadow: none !important;
+    }
+</style>
 </body>
 </html>

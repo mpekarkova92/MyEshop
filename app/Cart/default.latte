@@ -1,8 +1,9 @@
 {layout '../Presentation/@layout.latte'}
 
 {block content}
-<h1 class="mb-4 fw-bold text-dark">Váš nákupuní košík</h1>
+<h1 class="mb-4 fw-bold text-dark">Váš nákupní košík</h1>
 
+{snippet cartTable}
 {if empty($products)}
     <div class="alert alert-info">
         Váš košík je prázdný. <a n:href="Home:default">Vyberte zboží</a>
@@ -28,18 +29,19 @@
                         <td class="text-center">
                             <div class="btn-group border rounded shadow-sm">
 
-                                    {*  MINUS BUTTON *}
-                                <a n:href="remove!, id => $item->id" class="btn btn-light btn-sm px-2">
+                                {* MINUS BUTTON *}
+                                <a n:href="remove!, id => $item->id" class="btn btn-light btn-sm px-2 ajax">
                                     <i class="fas fa-minus text-danger"></i>
                                 </a>
 
-                                    {* QUANTITY *}
-                                <span class="px-3 py-1 bg-white fw-bold border-start border-end">
-                                    {$item->quantity}
-                                </span>
+                                <input type="number" 
+                                    value="{$item->quantity}" 
+                                    class="form-control form-control-sm text-center fw-bold ajax-input" 
+                                    style="width: 40px; font-weight: bold;" 
+                                    data-url="{link updateQuantity!, id => $item->id}">
 
-                                    {* PLUS BUTTON *}
-                                <a n:href="add!, id => $item->id" class="btn btn-light btn-sm px-2">
+                                {* PLUS BUTTON *}
+                                <a n:href="add!, id => $item->id" class="btn btn-light btn-sm px-2 ajax">
                                     <i class="fas fa-plus text-success"></i>
                                 </a>
                             </div>
@@ -52,10 +54,12 @@
                             {/if}
                         </td>
                         <td class="text-end">
-                            {$item->price|number:0, ',', ' '} Kč
+                            {* Změněno na 2 desetinná místa *}
+                            {$item->price|number:2, ',', ' '} Kč
                         </td>
                         <td class="text-end p-3 fw-bold">
-                            {$item->subtotal|number:0, ',', ' '} Kč
+                            {* Změněno na 2 desetinná místa *}
+                            {$item->subtotal|number:2, ',', ' '} Kč
                         </td>
                     </tr>
                 {/foreach}
@@ -63,7 +67,10 @@
             <tfoot class="table-light">
                 <tr>
                     <td colspan="3" class="text-end fw-bold h4 p-3">Celkem k úhradě</td>
-                    <td class="text-end p-3 fw-bold h4 text-success">{$total|number:0, ',', ' '}Kč</td>
+                    <td class="text-end p-3 fw-bold h4 text-success">
+                        {* Změněno na 2 desetinná místa *}
+                        {$total|number:2, ',', ' '} Kč
+                    </td>
                 </tr>
             </tfoot>
         </table>
@@ -77,4 +84,5 @@
         </a>
     </div>
 {/if}
-{/block}       
+{/snippet}
+{/block}
