@@ -11,9 +11,8 @@ use App\Model\PaymentService;
  */
 final class CartPresenter extends Nette\Application\UI\Presenter
 {
-
     /**
-     * Konstruktor: Nette sem automaticky předá inejctine připojení k databázi
+     * Konstruktor: Připojení databáze a platební služby
      */
     public function __construct(
         private Explorer $database,
@@ -21,28 +20,28 @@ final class CartPresenter extends Nette\Application\UI\Presenter
     ) {}
 
     /**
-     * renderDefault: Připravuje data pro zobrazení obsahu košíku 
+     * renderDefault: Připravuje data pro zobrazení košíku
      */
     public function renderDefault(): void
     {
-        // Otevřeme session sekci s názvem 'cart'
+        // Otevření session sekce košíku
         $session = $this->getSession('cart');
 
-        // Vytáhneme seznam ID produktů. pokud je košík prázdný, použijeme prázné hodnoty
+        // Načtení ID produktů ze session (pokud nic není, prázdné pole)
         $rawItems = $session->items ?? [];
         $items = is_array($rawItems) ? $rawItems : [];
 
-        // Pokud v košíku nic není, pošleme do šablony prázdné hodnoty
+        // Pokud je košík prázdný, pošleme do šablony nuly
         if ($items === []) {
             $this->template->products = [];
             $this->template->total = 0;
             return;
         }
 
-        // Spočítáme kolikrát je ID v košíku
+        // Spočítá výskyt každého ID (např. ID 5 je tam 3x)
         $counts = array_count_values($items);
 
-        // Vytáhneme unikátní ID
+        // SQL: Vytáhne z DB jen ty produkty, co jsou v košíku
         $productFromDb = $this->database->table('product')
             ->where('id', array_keys($counts))
             ->fetchAll();
@@ -50,23 +49,24 @@ final class CartPresenter extends Nette\Application\UI\Presenter
         $finalItems = [];
         $total = 0;
 
-        // Poskládáme si pole, které obsahuje produkt i jeho počet
+        // Procházíme produkty z DB a doplňujeme k nim počty a výpočty
         foreach ($productFromDb as $product) {
             $row = $product->toArray();
             $productId = (int) $product->id;
             $quantity = (int) ($counts[$productId] ?? 0);
 
-            $stockRaw = $row['stock']
-                ?? $row['in_stock']
-                ?? $row['qty']
-                ?? $row['quantity']
-                ?? null;
-
+            // Detekce názvu sloupce pro sklad (podpora různých verzí DB)
+            $stockRaw = $row['stock'] ?? $row['in_stock'] ?? $row['qty'] ?? $row['quantity'] ?? null;
             $stock = is_numeric($stockRaw) ? (int) $stockRaw : null;
+            
+            // Kontrola, zda zákazník nechce víc, než máme na skladě
             $isStockProblem = $stock !== null && $quantity > $stock;
+            
+            // Výpočet ceny za položku a přičtení do celkové sumy
             $subtotal = $product->price * $quantity;
             $total += $subtotal;
             
+            // Vytvoření objektu pro šablonu (hezčí práce v .latte)
             $finalItems[] = (object) [
                 'id' => $productId,
                 'name' => $product->name,
@@ -79,61 +79,34 @@ final class CartPresenter extends Nette\Application\UI\Presenter
             ];
         }
 
+        // Předání dat do Latte šablony
         $this->template->products = $finalItems;
         $this->template->total = $total;
     }
 
     /**
-     * Signál pro vymazání celého košíku
+     * handleClear: Vymaže celý košík (vysype session)
      */
     public function handleClear(): void
     {
         $session = $this->getSession('cart');
-
-        // Smažeme celou sekci 'items' v session 
-        unset($session->items);
-
+        unset($session->items); // Smazání dat ze session
         $this->flashMessage('Košík byl úspěšně smazán', 'info');
-
-        // Přesměrování na stránku
         $this->redirect('this');
     }
 
     /**
-     * Signál pro přidání jednoho kusu produktu do košíku (tlačítko plus)
+     * handleAdd: Přidá jeden kus produktu (tlačítko PLUS)
      */
     public function handleAdd(int $id): void
-{
-    $session = $this->getSession('cart');
-    $items = is_array($session->items) ? $session->items : [];
-
-    $items[] = $id;
-    $session->items = $items;
-
-    // AJAX kontrola
-    if ($this->isAjax()) {
-        $this->redrawControl('cartTable');
-    } else {
-        $this->redirect('this');
-    }
-
-}
-    /**
-     * Signál pro odebrání jednoho kusu produktu z košíku (tlačítko minus)
-     */
-    public function handleRemove(int $id): void
     {
         $session = $this->getSession('cart');
         $items = is_array($session->items) ? $session->items : [];
 
-        $key = array_search($id, $items, true);
+        $items[] = $id; // Přidání ID do pole
+        $session->items = $items;
 
-        if ($key !== false) {
-            array_splice($items, (int) $key, 1);
-            $session->items = $items;
-        }
-
-        // AJAX kontrola
+        // Pokud voláno AJAXem, překreslí jen snippet (tabulku)
         if ($this->isAjax()) {
             $this->redrawControl('cartTable');
         } else {
@@ -141,6 +114,32 @@ final class CartPresenter extends Nette\Application\UI\Presenter
         }
     }
 
+    /**
+     * handleRemove: Odebere jeden kus produktu (tlačítko MINUS)
+     */
+    public function handleRemove(int $id): void
+    {
+        $session = $this->getSession('cart');
+        $items = is_array($session->items) ? $session->items : [];
+
+        // Najde pozici ID v poli a smaže ji
+        $key = array_search($id, $items, true);
+        if ($key !== false) {
+            array_splice($items, (int) $key, 1);
+            $session->items = $items;
+        }
+
+        // AJAX podpora pro bleskovou změnu
+        if ($this->isAjax()) {
+            $this->redrawControl('cartTable');
+        } else {
+            $this->redirect('this');
+        }
+    }
+
+    /**
+     * handleCheckout: Zpracování objednávky (uložení do DB a odečet skladu)
+     */
     public function handleCheckout(): void
     {
         $session = $this->getSession('cart');
@@ -151,6 +150,7 @@ final class CartPresenter extends Nette\Application\UI\Presenter
             $this->redirect('this');
         }
     
+        // Spočítání kusů a načtení cen z DB
         $counts = array_count_values($items);
         $productsFromDb = $this->database->table('product')
             ->where('id', array_keys($counts))
@@ -161,7 +161,7 @@ final class CartPresenter extends Nette\Application\UI\Presenter
             $totalAmount += ((float) $product->price) * ($counts[$product->id] ?? 0);
         }
     
-        // SQL: Vytvoření záznamu v tabulce 'orders'
+        // SQL: Vytvoření hlavní objednávky
         $order = $this->database->table('orders')->insert([
             'customer_name' => 'Anonymní zákazník',
             'email' => 'test@test.cz',
@@ -170,9 +170,9 @@ final class CartPresenter extends Nette\Application\UI\Presenter
             'created_at' => new \DateTime(),
         ]);
     
-        $orderId = $order->id; // Skutečné ID z databáze
+        $orderId = $order->id;
     
-        // SQL: Uložení jednotlivých položek do 'order_items'
+        // SQL: Uložení položek objednávky + Odečet ze skladu v tabulce produktů
         foreach ($productsFromDb as $product) {
             $qty = (int) $counts[$product->id];
             $this->database->table('order_items')->insert([
@@ -182,49 +182,51 @@ final class CartPresenter extends Nette\Application\UI\Presenter
                 'price' => $product->price,
             ]);
             
-            // SQL: Odečtení ze skladu
+            // SQL: Aktualizace počtu kusů na skladě
             $product->update(['quantity' => $product->quantity - $qty]);
         }
     
-        unset($session->items);
+        unset($session->items); // Vyprázdnění košíku po nákupu
         
-        // Přesměrování na novou akci 'done' (vytvoříme v dalším kroku)
+        // Přesměrování na děkovací stránku
         $this->redirect('done', ['id' => $orderId]);
     }
 
+    /**
+     * renderDone: Zobrazení potvrzení o objednávce
+     */
     public function renderDone(int $id): void
     {
-        // SQL: Vyhledá objednávku v DB podle ID z adresy
+        // SQL: Načte detaily objednávky z DB pro zobrazení zákazníkovi
         $order = $this->database->table('orders')->get($id);
 
-        // Kontrola: pokud objednávka neexistuje, vyhodí chybu
         if (!$order) {
             $this->error('Objednávka nebyla nalezena.');
         }
 
-        // Latte: Předá nalezenou objednávku do šablony
         $this->template->order = $order;
     }
 
-    // Přidání počtu produktů v košíku
+    /**
+     * handleUpdateQuantity: Ruční přepis čísla v košíku (AJAX)
+     */
     public function handleUpdateQuantity(int $id, int $quantity = 1): void
     {
         $session = $this->getSession('cart');
         $items = is_array($session->items) ? $session->items : [];
 
-        // Vymažeme všechny staré výskyty tohoto ID (počet)
+        // Vymaže všechny staré výskyty produktu a nahradí je novým počtem
         $items = array_filter($items, fn($itemId) => $itemId !== $id);
 
-        // Přidáme ho tam tolikrát, kolik uživatel napsal
         for ($i = 0; $i < $quantity; $i++) {
             $items[] = $id;
         }
 
         $session->items = $items;
         
-        // Pokud je to AJAX, překleslíme jen košík
+        // Překreslení snippetu (bez blikání stránky)
         if ($this->isAjax()) {
-            $this->redrawControl('cartTable'); // Zrychlení (Pošle jen kousek HTML ne celou stránku)
+            $this->redrawControl('cartTable');
         } else {
             $this->redirect('this');
         }
