@@ -1,59 +1,59 @@
 <?php declare(strict_types=1);
 
-namespace App\Presentation\Cart;
+    namespace App\Presentation\Cart;
 
-use Nette;
-use Nette\Database\Explorer;
-use App\Model\PaymentService;
-
-/**
- * Presenter pro obsluhu nákupního košíku
- */
-final class CartPresenter extends Nette\Application\UI\Presenter
-{
-    /**
-     * Konstruktor: Připojení databáze a platební služby
-     */
-    public function __construct(
-        private Explorer $database,
-        private PaymentService $paymentService,
-    ) {}
+    use Nette;
+    use Nette\Database\Explorer;
+    use App\Model\PaymentService;
 
     /**
-     * renderDefault: Připravuje data pro zobrazení košíku
-     */
-    public function renderDefault(): void
+    * Presenter pro obsluhu nákupního košíku
+    */
+    final class CartPresenter extends Nette\Application\UI\Presenter
     {
-        // Otevření session sekce košíku
-        $session = $this->getSession('cart');
+        /**
+        * Konstruktor: Připojení databáze a platební služby
+        */
+        public function __construct(
+            private Explorer $database,
+            private PaymentService $paymentService,
+        ) {}
 
-        // Načtení ID produktů ze session (pokud nic není, prázdné pole)
-        $rawItems = $session->items ?? [];
-        $items = is_array($rawItems) ? $rawItems : [];
+        /**
+        * renderDefault: Připravuje data pro zobrazení košíku
+        */
+        public function renderDefault(): void
+        {
+            // Otevření session sekce košíku
+            $session = $this->getSession('cart');
 
-        // Pokud je košík prázdný, pošleme do šablony nuly
-        if ($items === []) {
-            $this->template->products = [];
-            $this->template->total = 0;
-            return;
-        }
+                    // Načtení ID produktů ze session (pokud nic není, prázdné pole)
+                    $rawItems = $session->items ?? [];
+                    $items = is_array($rawItems) ? $rawItems : [];
 
-        // Spočítá výskyt každého ID (např. ID 5 je tam 3x)
-        $counts = array_count_values($items);
+                    // Pokud je košík prázdný, pošleme do šablony nuly
+                    if ($items === []) {
+                        $this->template->products = [];
+                        $this->template->total = 0;
+                        return;
+                    }
 
-        // SQL: Vytáhne z DB jen ty produkty, co jsou v košíku
-        $productFromDb = $this->database->table('product')
-            ->where('id', array_keys($counts))
-            ->fetchAll();
+                    // Spočítá výskyt každého ID (např. ID 5 je tam 3x)
+                    $counts = array_count_values($items);
 
-        $finalItems = [];
-        $total = 0;
+                    // SQL: Vytáhne z DB jen ty produkty, co jsou v košíku
+                    $productFromDb = $this->database->table('product')
+                    ->where('id', array_keys($counts))
+                    ->fetchAll();
 
-        // Procházíme produkty z DB a doplňujeme k nim počty a výpočty
-        foreach ($productFromDb as $product) {
-            $row = $product->toArray();
-            $productId = (int) $product->id;
-            $quantity = (int) ($counts[$productId] ?? 0);
+                    $finalItems = [];
+                    $total = 0;
+
+                    // Procházíme produkty z DB a doplňujeme k nim počty a výpočty
+                    foreach ($productFromDb as $product) {
+                        $row = $product->toArray();
+                        $productId = (int) $product->id;
+                        $quantity = (int) ($counts[$productId] ?? 0);
 
             // Detekce názvu sloupce pro sklad (podpora různých verzí DB)
             $stockRaw = $row['stock'] ?? $row['in_stock'] ?? $row['qty'] ?? $row['quantity'] ?? null;

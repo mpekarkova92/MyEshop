@@ -1,0 +1,48 @@
+{layout '../@layout.latte'}
+
+{block content}
+<div class="d-flex justify-content-between align-item-center mb-4">
+    <h1 class="fw-bold text-dark">Správa objednávek</h1>
+    <span class="badge bg-primary fs-6">Celkem: {count($orders)}</span>
+</div>
+
+<div class="table-responsive shadow-sm rounded">
+    <table class="table table-hover align-middle bg-white">
+        <thead class="table-dark">
+            <tr>
+                <th class="ps-3">ID</th>
+                <th>Datum</th>
+                <th>Zákazník</th>
+                <th class="text-end">Částka</th>
+                <th class="text-center">Stav</th>
+                <th class="text-center">Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            {foreach $orders as $order}
+                <tr>
+                    <td class="ps-3 fw-bold">#{$order->id}</td>
+                    <td>{$order->created_at|date:'d.m.Y H:i'}</td>
+                    <td>
+                        <div class="fw-bold">{$order->customer_name}</div>
+                        <small class="text-muted">{$order->email}</small>
+                    </td>
+                    <td class="text-end fw-bold text-succes">
+                        {$order->total_price|number:2, ',', ' '} Kč
+                    </td>
+                    <td class="text-center">
+                        <span class="badge {if $order->status === 'new'}bg-warning text-dark{else}bg-succes{/if}">
+                            {$order->status === 'new' ? 'Nová' : 'Vyřízená'}
+                        </span>
+                    </td>
+                    <td class="text-center pe-3">
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> Detail
+                        </a>
+                    </td>
+                </tr>
+            {/foreach}
+        </tbody>
+    </table>
+</div>
+{/block}
