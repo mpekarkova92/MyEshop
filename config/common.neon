@@ -28,3 +28,5 @@ di:
 		parameters: no
 		tags: no
 		
+services:
+	- App\Model\MyAuthenticator

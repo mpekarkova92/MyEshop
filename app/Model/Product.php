@@ -11,14 +11,16 @@ class Product {
     public float $price;
     public ?string $color;
     public ?string $description;
+    public ?float $old_price;
 
     /* Konstruktor pro inicializaci produktu */
-    public function __construct(int $id, string $name, float $price, ?string $color = null, ?string $description = null) {
+    public function __construct(int $id, string $name, float $price, ?string $color = null, ?string $description = null, ?float $old_price = null) {
         $this->id = $id;
         $this->name = $name;
         $this->price = $price;
         $this->color = $color;
         $this->description = $description;
+        $this->old_price = $old_price;
     }
 
 

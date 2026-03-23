@@ -3,10 +3,8 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
-	{* Dynamický titulek: Pokud šablona nastaví {block title}, zobrazí se zde*}
 	<title>{ifset title}{include title|stripHtml} | {/ifset}My E-shop</title>
 
-	{asset? 'main.js'}
 	{* bootstrap *}
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 	{* FontAwesome *}
@@ -14,57 +12,78 @@
 </head>
 
 <body class="bg-light">
-		<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-			<div class="container d-flex justify-content-between">
-				<a class="navbar-brand" n:href="Home:default">My Eshop - Elektro</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" n:href="Home:default">My Eshop - Elektro</a>
 
-				{* KOŠÍK: Zobrazení aktuálního stavu ze session *}
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
 
-				<a n:href="Cart:default" class="text-decoration-none">
-					<span class="navbar-text text-white">
-						<i class="fas fa-shopping-cart"></i>
-					</span>
-					<span class="badge bg-primary">					
-						{var $cartSession = $presenter->getSession('cart')}
-						{ifset $cartSession->items}{count($cartSession->items)}{else}0{/ifset} 										
-					</span>
-				</a>
-			</div>
-		</nav>
+                    {* SEKCE POUZE PRO ADMINA *}
+                    {if $user->isLoggedIn() && $user->isInRole('admin')}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-warning fw-bold" href="#" id="adminMenu" data-bs-toggle="dropdown">
+                                <i class="fas fa-tools me-1"></i> Administrace
+                            </a>
+                            <ul class="dropdown-menu shadow-sm border-0 p-3" style="min-width: 200px;">
+                                <li><h6 class="dropdown-header px-0">OBRATY</h6></li>
+                                <li><span class="dropdown-item-text px-0">Dnes: <b>{$stats['today']|number:0,',',' '} Kč</b></span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" n:href="Admin:default"><i class="fas fa-shopping-bag me-2"></i> Objednávky ({$newOrdersCount ?? 0})</a></li>
+                                <li><a class="dropdown-item" n:href="Home:default"><i class="fas fa-box me-2"></i> Produkty a Sklad</a></li>
+								
 
-		<div class="container bg-white p-4 shadow-sm rounded">
-		{* Flash zprávy: Informační bubliny *}
-			<div n:foreach="$flashes as $flash" n:class="alert, 'alert-' . $flash->type">{$flash->message}</div>
+                            </ul>
+                        </li>
+                    {/if}
+                </ul>
 
-			{* Tady se vykreslí konkrétní stránky *}
-			{include content}
-		</div>
+                {* PRAVÁ STRANA NAVIGACE *}
+                <div class="navbar-nav ms-auto align-items-center">
+                    
+                    {* --- TADY BYL CHYBĚJÍCÍ KOŠÍK --- *}
+                    <a n:href="Home:default" class="nav-link me-3 position-relative">
+                        <i class="fas fa-shopping-cart fa-lg text-white"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" n:if="($cartCount ?? 0) > 0">
+                            {$cartCount}
+                        </span>
+                    </a>
+                    {* ------------------------------- *}
 
-		<script src="https://unpkg.com/naja@2/dist/Naja.min.js"></script>
-			<script>
-    			naja.initialize();
-			</script>
-			<script src="https://unpkg.com/naja@2/dist/Naja.min.js"></script>
+                    {if $user->isLoggedIn()}
+                        <span class="navbar-text me-3 small text-white-50">
+                            Uživatel: <b>{$user->getIdentity()->name ?? 'Admin'}</b>
+                        </span>
+                        <a n:href="Sign:out" class="btn btn-outline-light btn-sm fw-bold rounded-pill px-3 text-decoration-none">
+                            Odhlásit
+                        </a>
+                    {else}
+                        <a n:href="Sign:in" class="btn btn-primary btn-sm fw-bold rounded-pill px-4 shadow-sm text-decoration-none">
+                            <i class="fas fa-user me-1"></i> Přihlásit se
+                        </a>
+                    {/if}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container bg-white p-4 shadow-sm rounded">
+        <div n:foreach="$flashes as $flash" n:class="alert, 'alert-' . $flash->type">{$flash->message}</div>
+        {include content}
+    </div>
+
+    {* SKRIPTY - Důležité pro dropdown a Naja *}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/naja@2/dist/Naja.min.js"></script>
+    <script>naja.initialize();</script>
+
 <style>
-    /* Skrytí šipek pro Chrome, Safari, Edge, Opera */
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    /* Skrytí šipek pro Firefox */
-    input[type=number] {
-        -moz-appearance: textfield;
-    }
-
-    /* Vzhled políčka, aby vypadalo čistě */
-    .ajax-input {
-        border: none;
-        background: transparent;
-        outline: none;
-        box-shadow: none !important;
-    }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .ajax-input { border: none; background: transparent; outline: none; box-shadow: none !important; }
+    
+    /* Zpřístupní dropdown i při najetí myší */
+    .dropdown:hover .dropdown-menu { display: block; margin-top: 0; }
 </style>
 </body>
 </html>

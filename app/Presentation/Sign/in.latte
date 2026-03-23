@@ -1,0 +1,31 @@
+{block content}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <h1 class="h3 fw-bold mb-4 text-center">Přihlášení</h1>
+
+                {form signInForm}
+                    <div class="mb-3">
+                        <label n:name="email" class="form-label text-muted small fw-bold">UŽIVATELSKÉ JMÉNO</label>
+                        <input n:name="email" class="form-control border-0 bg-light shadow-sm">
+                    </div>
+
+                    <div class="mb-3">
+                        <label n:name="password" class="form-label text-muted small fw-bold">HESLO</label>
+                        <input n:name="password" class="form-control border-0 bg-light shadow-sm">
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button n:name="send" class="btn btn-primary fw-bold py-2 rounded-3 shadow-sm">Přihlásit se</button>
+                    </div>
+                    
+                    <div n:if="$form->hasErrors()" class="alert alert-danger mt-3 small">
+                        <p n:foreach="$form->errors as $error">{$error}</p>
+                    </div>
+                {/form}
+            </div>
+        </div>
+    </div>
+</div>
+{/block}

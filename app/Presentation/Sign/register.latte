@@ -1,0 +1,41 @@
+{block content}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white p-3">
+                    <h2 class="h5 mb-0">Vytvořit nový účet</h2>
+                </div>
+                <div class="card-body p-4">
+                    {* Vykreslení registračního formuláře *}
+                    {form registerForm}
+                        <div class="mb-3">
+                            <label n:name="full_name" class="form-label">Celé jméno</label>
+                            <input n:name="full_name" class="form-control" placeholder="Jan Novák">
+                        </div>
+
+                        <div class="mb-3">
+                            <label n:name="email" class="form-label">E-mailová adresa</label>
+                            <input n:name="email" class="form-control" placeholder="name@example.com">
+                        </div>
+
+                        <div class="mb-3">
+                            <label n:name="password" class="form-label">Heslo (min. 6 znaků)</label>
+                            <input n:name="password" class="form-control">
+                        </div>
+
+                        <div class="d-grid">
+                            <button n:name="send" class="btn btn-primary fw-bold">Zaregistrovat se</button>
+                        </div>
+                    {/form}
+
+                    <hr>
+                    <p class="text-center mb-0">
+                        Už máte účet? <a n:href="Sign:in">Přihlaste se zde</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
